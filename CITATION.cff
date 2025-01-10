@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the following paper:"
+authors:
+  - family-names: Rahimi
+    given-names: Mohammad Naqib
+  - family-names: Moutsanidis
+    given-names: Georgios
+title: "Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model"
+journal: "[Journal Name]"
+doi: "[DOI]"
+url: "https://github.com/naqibr/SPH-M7microplane-Concrete"
+year: 2025
