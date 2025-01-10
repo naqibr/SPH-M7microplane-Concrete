@@ -119,6 +119,8 @@ private:
 
 	Mat3d Ident;	  	 	// Identity matrix
 
+	uint Type;				// Size effect type -> 1: Type 1, 2: Type 2
+	double D;
 	// Geometry Properties
 	double Lx;				// Lenght of plate in X direction
 	double Ly;				// Lenght of plate in Y direction
@@ -166,6 +168,23 @@ private:
 	double MPMql[6][37];
 	double MPMqm[6][37];
 	double MPMw[37];
+
+	//Particle-to-Particle contact
+	void InitContParticles();							//Generates contact particles
+	Vec3d *ContPos;										//Current Position list of particles of the contacting object(S)
+	Vec3d *ContPosi;									//Initial Position list of particles of the contacting object(S)
+	Vec3d *ContForce;									//List of Contact force of particles of the contacting object(S)
+	int *BodyPartList;									//List of all the SPH particles that potentially will be in contact with contacting object(s)
+	
+	/*Here I assume 3 contacting objects and gnerate lists for 3+1*/
+	int BodyPartStart[4]={0,0,0,0};		//Adresses of the first SPH particle contacting with nth=1,2,3 contacting object(s)
+	int ContPartStart[4]={0,0,0,0};		//Adresses of the first contact particle of the nth=1,2,3 contacting object(s)
+	int numContParticles=0;				//Total number of contact particles in all the contacting objects
+	int numListParticles=0;				//Total number of SPH particles that potentially will be in contact with contacting object(s)
+	double width;						//Width of contacting objects
+	double height;						//height of contacting objects
+	double dr0=0.0;						//Extra contact range, total contact range is partDist+dr0
+	double Kp=0.0;						//Contact potential
 };
 
 #endif

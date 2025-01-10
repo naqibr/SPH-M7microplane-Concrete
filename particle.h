@@ -44,6 +44,7 @@ public:
 	Vec3d accl;						//Particle current Acceleration = dv/dt
 	Vec3d artviscforce;				//Artificial viscousity
 	Vec3d iforce;					//Internal force
+	Vec3d contforce;				//Contact force
 
 	Mat3d FF;						//Deformation Gradient FF=dx/dX
 	double jacob;					//Determinant of defromation gradient

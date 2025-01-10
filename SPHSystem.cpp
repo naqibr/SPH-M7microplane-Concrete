@@ -66,37 +66,54 @@ SPHSystem3D::SPHSystem3D(int argc, char *argv[])
 			{
 				thrd_num = atoi(argv[i + 1]);
 			}
+			if (strcmp(argv[i], "-D") == 0)
+			{
+				D = atof(argv[i + 1]);
+			}
+			if (strcmp(argv[i], "-type") == 0)
+			{
+				Type = (uint) atoi(argv[i + 1]);
+			}
 		}
+	}
+	if(!D){
+		std::cout << "\n\n ERROR -> D was not entered, Please enter the value of D as -D value";
+		exit(0);
+	}
+	if(Type!=1 && Type!=2){
+		std::cout << "\n\n ERROR -> Please enter Type as -type value. Type can only be 1 or 2";
+		exit(0);
 	}
 	if (thrd_num <= 0) thrd_num = 1;
 	omp_set_num_threads(thrd_num);
 	std::cout << "\n\nNumber of parallel threads used: " << thrd_num << "\n";
 
-	young = 30.1730e9 / 1.0e6; // m7fmaterial_ subroutine requires Elastic modulus in units of MPa
-	dens = 1.0e0;			   // Set to 1 to reduce dynamic effects
+	young = 28.50e9 / 1.0e6; 	// m7fmaterial_ subroutine requires Elastic modulus in units of MPa
+	dens = 1.0e0;			   	// Set to 1 to reduce dynamic effects
 	poisson = 0.18e0;
-	k_1 = 105.0e-6;
-	k_2 = 110.0e0;
+	k_1 = 55.0e-6;
+	k_2 = 65.0e0;
 	k_3 = 20.0e0;
 	k_4 = 30.0e0;
-	k_5 = 8.0e-4;
+	k_5 = 1.0e-4;
 
 	ArtViscCoeff = 5.0;
 	k_kernel = 2.0001;
 	timeStep = 1.0e-10;
 
 	// Geometry Properties
-	Lx = 100.0e-3;
-	Ly = 100.0e-3;
-	Lz = 50.0e-3;
-	partDist = 2.5e-3;
-	CompressionRate = (1.0 / 100.0 * Lz) / (1000000.0 * timeStep); // Adjusted so that the prism is compressed 1\% in 1000000 steps
-	
+	Lx = 2.4 * D;
+	Ly = 40.0e-3;
+	Lz = D;
+	partDist = 3.125e-3;
+	maxCompression = 0.003;
+	CompressionRate = maxCompression*Lz/(10000000.0*timeStep) * 40.0e-3/D; // Adjusted accodringly to get a smooth graph with no dynamic effects
+
 	// time optionse
-	print_step = 10000;
+	print_step = 5000 * round(D/40.0e-3);
 	save_step = print_step;
 	RampTimeStep = save_step;
-	maxTime = (1.0 / 100.0 * Lz) / (CompressionRate) + 2.0 * save_step * timeStep;
+	maxTime = (maxCompression * Lz) / (CompressionRate) + 2.0 * save_step * timeStep;
 	kernel = partDist * 1.333333e0;
 	cellSize = kernel * k_kernel;
 
@@ -118,6 +135,7 @@ SPHSystem3D::SPHSystem3D(int argc, char *argv[])
 	std::printf("\n=> SPHSystem variables:");
 	std::printf("\n dx\t= %.3g", partDist);
 	std::printf("\n Total SPH Particles\t= %d", numParticle);
+	std::printf("\n Total Contact Particles\t= %d", numContParticles);
 	std::printf("\n Simulation Timestep:\t= %.3g", timeStep);
 	std::printf("\n E\t= %.3g", young);
 	std::printf("\n Pr\t= %.2g", poisson);
@@ -129,16 +147,18 @@ SPHSystem3D::SPHSystem3D(int argc, char *argv[])
 	std::printf("\n k_5\t= %.3g", k_5);
 	std::printf("\n Art. Visc. Coef.\t= %.3g", ArtViscCoeff);
 	std::printf("\n Comp.\t= %.3g [m/s]", CompressionRate);
+	std::printf("\n Contact Potential\t= %.3g", Kp);
+	std::printf("\n Contact Range\t= %.3g [m]", dr0+partDist);
 	std::cout << "\n================================\n";
 	std::cout.flush();
 
     createdir("output");
     createdir("output/ParaviewFiles");
 	char dir0[100];
-	std::sprintf(dir0, "output/ParaviewFiles");
+	std::sprintf(dir0, "output/ParaviewFiles/Case_%i_%i", Type, (uint)(D*1000));
 	createdir(dir0);
 	// Create file for stress strain curve
-	std::sprintf(DataFileName, "output/_Stress_Strain.txt");
+	std::sprintf(DataFileName, "output/_Stress_Strain_%i_%i.txt", Type, (uint)(D*1000));
 	DataFile.open(DataFileName, std::ios::out | std::ios::trunc);
 	DataFile.precision(11);
 	DataFile.setf(std::ios::fixed);
@@ -167,9 +187,7 @@ void SPHSystem3D::initParticle()
 	minY = 1.0e20;
 	maxZ = -1.0e20;
 	minZ = 1.0e20;
-	int tpe;
-
-	//Dummy count
+	uint ntn=0, ntm=0;
 	for (k = partDist / 2.0e0; k <= Lz; k += partDist)
 	{
 		if (k > maxZ)
@@ -184,16 +202,23 @@ void SPHSystem3D::initParticle()
 			if (j < minY)
 				minY = j;
 
-			for (i = partDist / 2.0e0; i <= Lx; i += partDist)
+			for (i = 0.0; i <= Lx/2.0; i += partDist)
 			{
 				if (i > maxX)
 					maxX = i;
 				if (i < minX)
 					minX = i;
-				numParticle++;
+				numParticle++; // Dummy count for total number of particles
+				
+				//Count particles if they are on the notch
+				if(i<0.5*partDist){
+					ntm++;
+					if(Type==2 && k<=0.3*D) ntn++;
+				}
 			}
 		}
 	}
+	numParticle=2.0*numParticle-(ntm-ntn);
 	particles = (Particle3D *)malloc(sizeof(Particle3D) * numParticle);
 	numParticle = 0;
 
@@ -202,21 +227,31 @@ void SPHSystem3D::initParticle()
 	{
 		for (j = partDist / 2.0e0; j <= Ly; j += partDist)
 		{
-			for (i = partDist / 2.0e0; i <= Lx; i += partDist)
+			for (i = 0.0; i <= Lx/2.0; i += partDist)
 			{
-				tpe = 0; // no constrain
-				if (k >= Lz - partDist)
-								tpe = 3; // Apply Compression in Z direction
-				if (k < 0.99 * partDist)
-								tpe = 1; // Constrain displacement in Z direction
 				pos.e[0] = i;
 				pos.e[1] = j;
 				pos.e[2] = k;
 				
-				addSingleParticle(pos, vel, tpe);
+				if(i<0.5*partDist && Type==2 && k<=0.3*D) continue;
+				addSingleParticle(pos, vel, 0);
 			}
 		}
 	}
+
+	int maxParticle=numParticle;
+	minX = -maxX;
+	Particle3D *p;
+	// Mirror the generated particle for the left half
+	for (int k = 0; k < maxParticle; k++)
+	{
+		p = &(particles[k]);
+		pos = p->pos;
+		if(pos.e[0]<0.5*partDist) continue;
+		pos.e[0] = -pos.e[0];
+		addSingleParticle(pos, vel, 0);
+	}
+
 	gridSize.e[0] = ceil((maxX - minX) / cellSize) + 1;
 	gridSize.e[1] = ceil((maxY - minY) / cellSize) + 1;
 	gridSize.e[2] = ceil((maxZ - minZ) / cellSize) + 1;
@@ -227,7 +262,6 @@ void SPHSystem3D::initParticle()
 
 	// List of particles on the cross section with normal in Z direction, used for Force calculations
 	numCrossecParticles=0;
-	Particle3D *p;
 	//Dummy count
 	for (int k = 0; k < numParticle; k++)
 	{
@@ -246,6 +280,128 @@ void SPHSystem3D::initParticle()
 	}
 	std::cout << "\n >> Domain discretized.";
 	std::cout.flush();
+	InitContParticles();
+}
+
+void SPHSystem3D::InitContParticles(){
+	dr0=0.0*partDist;
+	Kp = 1.0e10;
+
+	int contcount=0;
+	double i,j,k;
+	width=4.9*partDist;
+	height=3.0*partDist;
+
+	//Dummy count for all the particles in one contacting object
+	for(j = minY;j<=maxY; j+=partDist){
+		for (i = minX; i < minX+width+partDist; i = i + partDist){
+			for (k = minZ-partDist; k > minZ-partDist-height; k=k-partDist){	
+				contcount++;
+			}
+		}
+	}
+	contcount=3*contcount; //Multiply by number of contacting objects
+	ContPos = (Vec3d *)malloc(sizeof(Vec3d) * contcount);
+	ContForce = (Vec3d *)malloc(sizeof(Vec3d) * contcount);
+	ContPosi = (Vec3d *)malloc(sizeof(Vec3d) * contcount);
+	contcount=0;
+	//First contacting object (left bottom)
+	for(j = minY;j<=maxY; j+=partDist){
+		for (i = minX; i < minX+width; i = i + partDist){
+			for (k = minZ-partDist-dr0; k > minZ-partDist-height-dr0; k=k-partDist){	
+				ContPos[contcount] = Vec3d(i,j,k);
+				ContForce[contcount].setZero();
+				contcount++;
+			}
+		}
+	}
+	ContPartStart[1]=contcount;
+	//Second contacting object (right bottom)
+	for(j = minY;j<=maxY; j+=partDist){
+		for (i = maxX; i > maxX-width; i = i - partDist){
+			for (k = minZ-partDist-dr0; k > minZ-partDist-height-dr0; k=k-partDist){	
+				ContPos[contcount] = Vec3d(i,j,k);
+				ContForce[contcount].setZero();
+				contcount++;
+			}
+		}
+	}
+	ContPartStart[2]=contcount;
+	//Third contacting object (middle top)
+	for(j = minY;j<=maxY; j+=partDist){
+		for (i = (maxX+minX)/2.0; i < (maxX+minX)/2.0+width; i = i + partDist){
+			for (k = maxZ+partDist+dr0; k < maxZ+partDist+height+dr0; k=k+partDist){	
+				ContPos[contcount] = Vec3d(i- floor(width/(2.0*partDist))*partDist,j,k);
+				ContForce[contcount].setZero();
+				contcount++;
+			}
+		}
+	}
+	numContParticles=contcount;
+	ContPartStart[3]=contcount;
+	
+	for(int k=0;k<ContPartStart[3];k++){
+		ContPosi[k] = ContPos[k];
+	}
+
+	//Generate list of SPH particles that will potentially be in contact with contacting objects
+	Particle3D *p;
+	numListParticles=0;
+	bool contbb=false;
+	//Dummy count
+	for(int k=0;k<numParticle;k++){
+		p = &(particles[k]);
+
+		contbb=false;
+		contbb=(p->pos.e[0]<=minX+width+partDist) && (p->pos.e[2]<minZ+1.2*partDist);
+		if(contbb) numListParticles++;
+
+		contbb=false;
+		contbb=(p->pos.e[0]>=maxX-width-partDist) && (p->pos.e[2]<minZ+1.2*partDist);
+		if(contbb) numListParticles++;
+
+		contbb=false;
+		contbb=(p->pos.e[0]>=(maxX+minX)/2.0-width/2.0-2.0*partDist) && (p->pos.e[0]<=(maxX+minX)/2.0+width/2.0+2.0*partDist) && (p->pos.e[2]>maxZ-1.2*partDist);
+		if(contbb) numListParticles++;
+	}
+	BodyPartList=new int[numListParticles];
+	numListParticles=0;
+
+	BodyPartStart[0]=0;
+	for(int k=0;k<numParticle;k++){
+		p = &(particles[k]);
+
+		contbb=false;
+		contbb=(p->pos.e[0]<=minX+width+partDist) && (p->pos.e[2]<minZ+1.2*partDist);
+		if(contbb){
+			BodyPartList[numListParticles]=k;
+			numListParticles++;
+		}
+	}
+	BodyPartStart[1]=numListParticles;
+	for(int k=0;k<numParticle;k++){
+		p = &(particles[k]);
+
+		contbb=false;
+		contbb=(p->pos.e[0]>=maxX-width-partDist) && (p->pos.e[2]<minZ+1.2*partDist);
+		if(contbb){
+			BodyPartList[numListParticles]=k;
+			numListParticles++;
+		}
+	}
+	BodyPartStart[2]=numListParticles;
+	for(int k=0;k<numParticle;k++){
+		p = &(particles[k]);
+
+		contbb=false;
+		contbb=(p->pos.e[0]>=(maxX+minX)/2.0-width/2.0-partDist) && (p->pos.e[0]<=(maxX+minX)/2.0+width/2.0+partDist) && (p->pos.e[2]>maxZ-1.2*partDist);
+		if(contbb){
+			BodyPartList[numListParticles]=k;
+			numListParticles++;
+		}
+	}
+	BodyPartStart[3]=numListParticles;
+	std::cout << "\n >> Contact Particles Generated.";
 }
 
 void SPHSystem3D::buildGrid()
@@ -321,6 +477,18 @@ void SPHSystem3D::calcKernel()
 						{
 							np = np->next;
 							continue;
+						}
+						if(Type==2){
+							if ((p->pos.e[2] <= 0.3 * D) && (np->pos.e[2] <= 0.3 * D)) {
+								if ((p->pos.e[0] < 0.0) && (np->pos.e[0] > 0.0)) {
+									np = np->next;
+									continue;
+								}
+								if ((np->pos.e[0] < 0.0) && (p->pos.e[0] > 0.0)) {
+									np = np->next;
+									continue;
+								}
+							}
 						}
 
 						double qq = disti / kernel;
@@ -405,6 +573,7 @@ void SPHSystem3D::OneStepCalculations()
 	Particle3D *p;
 	Particle3D *np;
 	Mat3d dFt;
+	Vec3d ContVel;
 
 	double dCompRate;
 	dCompRate = CompressionRate;
@@ -413,6 +582,7 @@ void SPHSystem3D::OneStepCalculations()
 		dCompRate = CompressionRate * iTimestep / RampTimeStep;
 
 	compression = compression + dCompRate * timeStep;
+	ContVel.setZero(); ContVel.e[2] = -dCompRate;
 #pragma omp parallel
 	{
 		//Stress calculations for each particle
@@ -497,7 +667,62 @@ void SPHSystem3D::OneStepCalculations()
 			p->epsOld = p->eps;
 			p->sigmaold = p->sigma;
 		}
+//Move contacting body 3
+#pragma omp for private(p) schedule(static)
+	for(int j=ContPartStart[2];j<ContPartStart[2+1];j++){
+		ContPos[j].e[2]=ContPosi[j].e[2]-compression;
+	}
+	// Contact force
+	for(int k=0;k<3;k++){
+	#pragma omp for private(p) schedule(static)
+		for(int i=BodyPartStart[k];i<BodyPartStart[k+1];i++){
+			p = &(particles[BodyPartList[i]]);
+			p->contforce.setZero();
+			Vec3d rab,vab;
+			double distab;
+			double Wab=0.0;
+			double Wsumab=0.0;
+			Vec3d cnormal;
+			cnormal.setZero();
+			for(int j=ContPartStart[k];j<ContPartStart[k+1];j++){
 
+				rab=p->pos-ContPos[j];
+				distab = rab.Length();
+				if(distab>partDist+dr0) continue;
+				vab=p->vel-ContVel;
+				if(rab.DotVec(vab)>0.0) continue;
+				Wab = CubicSplineKernel(distab/kernel);
+				
+				cnormal = cnormal + rab * Wab/(distab+1.0e-15);
+				Wsumab = Wsumab + Wab;
+			}
+			double da=0.0;
+			if(Wsumab<1.0e-15) {
+				cnormal.setZero();
+			} else {
+				cnormal = cnormal/Wsumab;
+				cnormal = cnormal/cnormal.Length();
+
+				for(int j=ContPartStart[k];j<ContPartStart[k+1];j++){
+
+					rab=p->pos-ContPos[j];
+					distab = rab.Length();
+					if(distab>partDist+dr0) continue;
+					vab=p->vel-ContVel;
+					if(rab.DotVec(vab)>0.0) continue;
+					Wab = CubicSplineKernel(distab/kernel);
+					da = da + cnormal.DotVec(rab) * Wab;
+				}
+				da = da/Wsumab;
+			}
+			
+			if(da<0.0) da=0.0;
+			double danc = partDist+dr0 - da;
+			
+			p->contforce = Kp * danc * cnormal;
+			p->contforce.e[1] = 0.0;
+		}
+	}
 #pragma omp for private(p, np, dFt) schedule(static)
 		for (int k = 0; k < numParticle; k++)
 		{
@@ -520,12 +745,10 @@ void SPHSystem3D::OneStepCalculations()
 			p->iforce = p->jacob * p->FFinv.DotVec(p->iforce);
 			p->artviscforce = ArtViscCoeff * kernel * p->jacob * p->FFinv.DotVec(p->artviscforce) * 3200; //3200 is the approximate speed of sound in concretes
 
-			p->accl = p->iforce + p->artviscforce;
+			p->contforce.e[1] = 0.0; //No need for y direction contact force
+			p->accl = p->iforce + p->artviscforce  + p->contforce/p->mass;
 			p->vel = p->vel + p->accl * timeStep;
-			if (p->type == 1)
-				p->vel.e[2] = 0.0;
-			else if (p->type == 3)
-				p->vel.e[2] = 0.0 - dCompRate;
+
 			p->disp = p->disp + p->vel * timeStep;
 			p->pos = p->posi + p->disp;
 		}
@@ -577,25 +800,24 @@ uint SPHSystem3D::calcCellHash(Vec3i pos)
 void SPHSystem3D::SaveResults()
 {
 	Particle3D *p;
-	double CompStress = 0.0;		//Global Compressive stress
+	double CompStress = 0.0;		//Total Compressive stress
 	double Fz=0.0;					//Total force in Z direction
-	double Area=0.0;				//Cross-section area
 	double fzp;
 	for (int j = 0; j < numCrossecParticles; j++)
 	{
 		p = &(particles[ListCrossecParticles[j]]);
 		fzp = (p->sigma.e[2][2] + p->sigma.e[2][1] + p->sigma.e[2][0]) * partDist * partDist;
-		Fz -= fzp;
-		Area += partDist * partDist;
+		Fz = Fz - fzp;
 	}
-	CompStress = Fz / Area;
+	double Sd = (maxX-minX)-width; //Free distance between right and left supports
+	CompStress = 3.0 * Fz * Sd / (2.0 * Ly * Lz * Lz); //The stress is calculated as \sigma_n = 6 P_0 Sd/(4LyLz^2) where P_0 is the equivalent force acting at the midpoint of the plate
 	DataFile.open(DataFileName, std::ios::app);
 	DataFile << compression / Lz << "\t" << CompStress << endl;
 	DataFile.close();
 
 	// MESH:
 	char filename2[200];
-	std::sprintf(filename2, "output/ParaviewFiles/SPHM7_%i.vtk", iTimestep);
+	std::sprintf(filename2, "output/ParaviewFiles/Case_%i_%i/SPHM7_%i.vtk", Type, (uint)(D*1000), iTimestep);
 
 	std::ofstream paramesh(filename2);
 	paramesh << "# vtk DataFile Version 5.1";
@@ -643,6 +865,29 @@ void SPHSystem3D::SaveResults()
 	}
 
 	paramesh.close();
+
+	//Export Contact particles
+	std::sprintf(filename2, "output/ParaviewFiles/Case_%i_%i/Contact_%i.vtk", Type, (uint)(D*1000), iTimestep);
+	std::ofstream paramesh2(filename2);
+	paramesh2 << "# vtk DataFile Version 5.1";
+	paramesh2 << "\nvtk output";
+	paramesh2 << "\nASCII";
+	paramesh2 << "\nDATASET POLYDATA";
+
+	paramesh2 << "\nPOINTS " << numContParticles << " float\n";
+	for (int i = 0; i < numContParticles; i++)
+	{
+		paramesh2 << ContPos[i].e[0] << "	" << ContPos[i].e[1] << "	" << ContPos[i].e[2] << " ";
+	}
+	paramesh2 << "\n\nVERTICES 2 " << numContParticles;
+	paramesh2 << "\nOFFSETS vtktypeint64\n0 " << numContParticles;
+	paramesh2 << "\nCONNECTIVITY vtktypeint64\n";
+	for (int i = 0; i < numContParticles; i++)
+	{
+		paramesh2 << i << " ";
+	}
+	paramesh2 << "\nPOINT_DATA " << numContParticles << "\n";
+	paramesh2.close();
 }
 
 SPHSystem3D::~SPHSystem3D()
