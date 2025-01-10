@@ -15,7 +15,7 @@ The repository is designed to promote transparency, reproducibility, and further
 1. Clone the repository:
    ```bash
    git clone https://github.com/naqibr/SPH-M7microplane-Concrete.git
-   cd SPH-M7-Concrete
+   cd SPH-M7microplane-Concrete
    ```
 
 2. Install dependencies using your package manager or manually as needed.
