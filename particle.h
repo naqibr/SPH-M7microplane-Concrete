@@ -74,6 +74,7 @@ public:
 	Mat3d eps;
 	Mat3d epsOld;
 	Mat3d sigma;
+	Mat3d PK;
 	Mat3d sigmaold;
 	double deps[6];
 	double epsN[6];

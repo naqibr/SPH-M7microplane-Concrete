@@ -496,6 +496,7 @@ void SPHSystem3D::OneStepCalculations()
 			p->eps = p->epsOld + p->strainInc;
 			p->epsOld = p->eps;
 			p->sigmaold = p->sigma;
+			p->PK = p->jacob * p->FFinv.DotMat(p->sigmaold);
 		}
 
 #pragma omp for private(p, np, dFt) schedule(static)
@@ -507,7 +508,7 @@ void SPHSystem3D::OneStepCalculations()
 			for (int i = 0; i < p->nNum; i++)
 			{
 				np = &(particles[p->pid[i]]);
-				dFt = p->sigma + np->sigma;
+				dFt = p->PK + np->PK;
 				p->iforce = p->iforce + dFt.DotVec(p->pG[i]) * np->mass;
 				
 				//Artificial Viscousity
@@ -517,7 +518,6 @@ void SPHSystem3D::OneStepCalculations()
 				}
 			}
 			p->iforce = p->iforce / (dens * dens);
-			p->iforce = p->jacob * p->FFinv.DotVec(p->iforce);
 			p->artviscforce = ArtViscCoeff * kernel * p->jacob * p->FFinv.DotVec(p->artviscforce) * 3200; //3200 is the approximate speed of sound in concretes
 
 			p->accl = p->iforce + p->artviscforce;
