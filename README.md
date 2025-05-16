@@ -84,10 +84,10 @@ The repository includes two branches each tailored for one of the selected examp
 If this code is helpfull, whether partially or entirely, in your research, please cite the relevant paper(s):
 
 ### Main Paper
-Paper Title: **Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model**  
+Paper Title: **SPH modeling of concrete failure using the M7 microplane model**  
 Authors: **M. Naqib Rahimi, Georgios Moutsanidis**  
-Journal: **[Journal Name]**  
-DOI: **[Insert DOI here]**  
+Journal: **International Journal of Mechanical Sciences**  
+DOI: ** **  
 
 ### Related Papers
 This program also implements the Total Lagrangian Smoothed Particle Hydrodynamics formulations presented in the following papers:
@@ -117,13 +117,11 @@ This program also implements the Total Lagrangian Smoothed Particle Hydrodynamic
 ### BibTeX
 ```bibtex
 @article{RahimiSPHM7,
-  title={Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model},
+  title={SPH modeling of concrete failure using the M7 microplane model},
   author={Rahimi, M. Naqib and Moutsanidis, Georgios},
-  journal={Journal Name},
+  journal={International Journal of Mechanical Sciences},
   year={2025},
-  volume={XX},
-  pages={XX--XX},
-  doi={DOI}
+  month={5}
 }
 
 @article{RahimiSPHPhaseField,
@@ -171,6 +169,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 ## Contact
 For questions or support, please contact:
+- **Georgios Moutsanidis**
 - **Naqib Rahimi**: Naqib.rahimy123@gmail.com
 - **GitHub Issues**: Use the Issues tab for bug reports or feature requests.
 ---
