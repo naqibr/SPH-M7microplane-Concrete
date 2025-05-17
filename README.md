@@ -1,7 +1,7 @@
 # SPH-M7 Microplane Concrete Modeling Repository
 
 ## Overview
-This is the repository for the source code accompanying the paper "**Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model.** M. N. Rahimi & G. Moutsanidis". This repository provides an open-access implementation of the SPH-M7 Microplane algorithm tailored for modeling concrete materials, including all scripts and data necessary for reproducing the results for selected cases presented in the paper.
+This is the repository for the source code accompanying the paper "**SPH modeling of concrete failure using the M7 microplane model.** M. N. Rahimi & G. Moutsanidis". This repository provides an open-access implementation of the SPH-M7 Microplane algorithm tailored for modeling concrete materials, including all scripts and data necessary for reproducing the results for selected cases presented in the paper.
 
 The repository is designed to promote transparency, reproducibility, and further development by the research community.
 
