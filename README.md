@@ -169,7 +169,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 ## Contact
 For questions or support, please contact:
-- **Georgios Moutsanidis**
+- **Georgios Moutsanidis**: Georgios.Moutsanidis@rutgers.edu
 - **Naqib Rahimi**: Naqib.rahimy123@gmail.com
 - **GitHub Issues**: Use the Issues tab for bug reports or feature requests.
 ---
