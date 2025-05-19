@@ -1,7 +1,7 @@
 ﻿/* 
  * This program is part of the following research paper:
  * 
- * [1] M. N. Rahimi and G. Moutsanidis, "Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model" (Journal)
+ * [1] M. N. Rahimi and G. Moutsanidis, "SPH modeling of concrete failure using the M7 microplane model" International Journal of Mechanical Sciences
  * 
  * It also implements the Total Lagrangian Smoothed Particle Hydrodynamics formulations presented in:
  * 
