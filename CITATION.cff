@@ -5,8 +5,8 @@ authors:
     given-names: Mohammad Naqib
   - family-names: Moutsanidis
     given-names: Georgios
-title: "Modeling concrete failure with smoothed particle hydrodynamics using the Microplane (M7) constitutive model"
-journal: "[Journal Name]"
-doi: "[DOI]"
+title: "SPH modeling of concrete failure using the M7 microplane model"
+journal: "International Journal of Mechanical Sciences"
+doi: "https://doi.org/10.1016/j.ijmecsci.2025.110378"
 url: "https://github.com/naqibr/SPH-M7microplane-Concrete"
 year: 2025
